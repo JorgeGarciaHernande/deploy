@@ -1,0 +1,41 @@
+.selector-patient-container{
+    background-color: #E3F2FD; /* Fondo azul claro para resaltar la acción */
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.selector-label {
+    font-weight: bold;
+    color: #1565C0;
+    font-size: 1.1em;
+}
+
+.patient-select-control {
+    padding: 10px 15px;
+    border: 1px solid #64B5F6;
+    border-radius: 6px;
+    font-size: 1em;
+    min-width: 250px;
+}
+
+.new-recipe-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding: 20px;
+    border: 1px solid #64B5F6;
+    border-radius: 8px;
+    background-color: #E3F2FD;
+}
+
+.panel-subtitle {
+    color: #4CAF50; 
+    font-size: 1.2em;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #E3F2FD;
+    padding-bottom: 5px;
+}

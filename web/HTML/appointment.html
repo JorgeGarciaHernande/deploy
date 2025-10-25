@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Programar y Ver Citas</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="backendappointment.js" defer></script> 
+    <style>
+        body { font-family: sans-serif; padding: 20px; background-color: #f4f4f9; }
+        header { padding: 10px; background-color: #f0f0f0; text-align: right; margin-bottom: 20px;}
+        
+        /* Contenedor principal para las dos columnas */
+        .main-layout {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            gap: 20px; 
+        }
+        
+        /* Contenedores de las secciones */
+        .content-section { 
+            flex: 1; 
+            min-width: 45%; 
+            background: white; 
+            padding: 30px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+        }
+
+        h3 { color: #0d47a1; border-bottom: 2px solid #0d47a1; padding-bottom: 10px; margin-bottom: 20px;}
+        
+        /* Estilos del Formulario */
+        form label { display: block; margin-top: 15px; font-weight: bold; }
+        form input[type="date"],
+        form input[type="time"],
+        form select {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        form button {
+            background-color: #0d47a1;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s;
+        }
+        form button:hover:not(:disabled) { background-color: #0c397f; }
+        form button:disabled { background-color: #ccc; cursor: not-allowed; }
+        .error-message { color: red; height: 15px; margin-top: 10px; }
+        
+        /* Estilos para la lista de citas */
+        #citas-registradas-contenido ul { list-style: none; padding: 0; }
+        #citas-registradas-contenido li { 
+            border-bottom: 1px solid #eee; 
+            padding: 10px 0; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+        }
+        #citas-registradas-contenido li:last-child { border-bottom: none; }
+        .appointment-info { flex-grow: 1; }
+        .appointment-time-date { font-weight: bold; color: #555; display: block; font-size: 0.9em; }
+        .patient-name-display { font-weight: normal; color: #000; font-size: 1.1em; }
+        
+        /* Botón de eliminar */
+        .delete-button {
+            background: none;
+            border: none;
+            color: red;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 5px 10px;
+            transition: color 0.2s;
+            font-size: 1.2em;
+        }
+        .delete-button:hover {
+            color: darkred;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <button onclick="location.href='main_menu.html'">Volver al Menú</button>
+    </header>
+
+    <div class="main-layout">
+        
+        <section class="content-section appointment-list-container">
+            <h3>Citas Futuras Programadas 🗓️</h3>
+            <div id="citas-registradas-contenido">
+                <p>Cargando citas...</p>
+            </div>
+            <p id="citas-status-message" class="error-message" style="color: blue;"></p>
+        </section>
+
+        <section class="content-section appointment-form-container">
+            <h3>Programar Nueva Cita ➕</h3>
+
+            <form id="new-appointment-form">
+                <label for="appt-paciente">Paciente:</label>
+                <select id="appt-paciente" required>
+                    <option value="">Cargando pacientes...</option>
+                </select>
+
+                <label for="appt-date">Fecha de la Cita:</label>
+                <input type="date" id="appt-date" required>
+
+                <label for="appt-time">Hora de la Cita:</label>
+                <input type="time" id="appt-time" required>
+
+                <button type="submit" id="save-event">Guardar Cita</button>
+                <p class="error-message" id="appt-status-message"></p>
+            </form>
+        </section>
+
+    </div>
+
+    <script>
+        // --- DOM ELEMENTS ---
+        const newApptForm = document.getElementById('new-appointment-form');
+        const apptPacienteSelect = document.getElementById('appt-paciente');
+        const apptDateInput = document.getElementById('appt-date');
+        const apptTimeInput = document.getElementById('appt-time');
+        const apptStatusMessage = document.getElementById('appt-status-message');
+        const citasRegistradasContenido = document.getElementById('citas-registradas-contenido');
+        const citasStatusMessage = document.getElementById('citas-status-message'); 
+        const saveButton = document.getElementById('save-event');
+        
+        // --- STATE ---
+        let currentDoctorId = null;
+
+        // --- FUNCIÓN PARA GENERAR LA LISTA VISUALMENTE (Expuesta globalmente para el backend) ---
+        function mostrarCitas(citas) {
+            if (citas.length === 0) {
+                citasRegistradasContenido.innerHTML = '<p>No hay citas futuras programadas.</p>';
+                return;
+            }
+
+            let html = '<ul>';
+            citas.forEach(cita => {
+                const hora = cita.hora_cita.substring(0, 5); 
+                const dateObj = new Date(cita.fecha_cita + 'T00:00:00');
+                const fecha = dateObj.toLocaleDateString('es-ES', { 
+                    day: 'numeric', month: 'short', year: 'numeric' 
+                });
+                const pacienteNombre = cita.paciente?.nombre_completo || 'Paciente desconocido';
+
+                html += `
+                    <li data-id-cita="${cita.id_cita}">
+                        <div class="appointment-info">
+                            <span class="patient-name-display">${pacienteNombre}</span>
+                            <span class="appointment-time-date">${fecha} a las ${hora}</span>
+                        </div>
+                        <button class="delete-button" data-id="${cita.id_cita}" title="Eliminar cita">🗑️</button>
+                    </li>
+                `;
+            });
+            html += '</ul>';
+
+            citasRegistradasContenido.innerHTML = html;
+        }
+        
+        // Aseguramos que la función sea accesible por el script externo
+        window.mostrarCitas = mostrarCitas;
+
+
+        // --- MANEJO DEL ENVÍO DEL FORMULARIO ---
+        async function handleNewAppointmentSubmit(e) {
+            e.preventDefault();
+            apptStatusMessage.textContent = ''; 
+            saveButton.textContent = 'Guardando...';
+            saveButton.disabled = true;
+
+            const pacienteId = apptPacienteSelect.value;
+            const fecha = apptDateInput.value;
+            const hora = apptTimeInput.value; 
+
+            if (!currentDoctorId) {
+                apptStatusMessage.textContent = 'Error: ID de doctor no disponible.';
+                saveButton.textContent = 'Guardar Cita';
+                saveButton.disabled = false;
+                return;
+            }
+
+            if (!pacienteId || !fecha || !hora) {
+                apptStatusMessage.textContent = 'Por favor, completa todos los campos.';
+                saveButton.textContent = 'Guardar Cita';
+                saveButton.disabled = false;
+                return;
+            }
+            
+            // Validación básica para evitar citas en el pasado
+            if (new Date(fecha + 'T' + hora) < new Date()) {
+                apptStatusMessage.textContent = 'No puedes programar citas en el pasado.';
+                saveButton.textContent = 'Guardar Cita';
+                saveButton.disabled = false;
+                return;
+            }
+
+            try {
+                // LLAMADA AL BACKEND
+                await guardarNuevaCita(currentDoctorId, pacienteId, fecha, hora);
+
+                apptStatusMessage.style.color = 'green';
+                apptStatusMessage.textContent = `✅ Cita programada con éxito.`;
+                newApptForm.reset(); 
+                
+            } catch (error) {
+                console.error("Error al guardar cita:", error);
+                apptStatusMessage.style.color = 'red';
+                apptStatusMessage.textContent = `Error al guardar: ${error.message}`;
+            } finally {
+                saveButton.textContent = 'Guardar Cita';
+                saveButton.disabled = false;
+            }
+        }
+        
+        // --- MANEJO DE ELIMINACIÓN ---
+        async function handleDeleteAppointmentClick(e) {
+            if (e.target.classList.contains('delete-button')) {
+                const idCita = e.target.dataset.id;
+                
+                if (!confirm(`¿Estás seguro de que quieres eliminar la cita con ID ${idCita}?`)) {
+                    return;
+                }
+
+                citasStatusMessage.style.color = 'blue';
+                citasStatusMessage.textContent = `Eliminando cita ${idCita}...`;
+
+                try {
+                    // LLAMADA AL BACKEND
+                    await eliminarCita(idCita);
+                    
+                    citasStatusMessage.style.color = 'green';
+                    citasStatusMessage.textContent = `✅ Cita eliminada con éxito.`;
+                    
+                } catch (error) {
+                    console.error("Error al eliminar cita:", error);
+                    citasStatusMessage.style.color = 'red';
+                    citasStatusMessage.textContent = `Error al eliminar: ${error.message}`;
+                }
+            }
+        }
+
+        // --- INICIALIZACIÓN Y SETUP DE LISTENERS ---
+        async function initializeAppointmentPage() {
+            // Se asume que doctorId se establece en localStorage al iniciar sesión
+            currentDoctorId = localStorage.getItem('doctorId'); 
+            
+            if (!currentDoctorId) {
+                console.error("ID de doctor no encontrado.");
+                apptStatusMessage.textContent = 'Error: Sesión no válida. Redirigiendo...';
+                setTimeout(() => { window.location.href = '../index.html'; }, 3000);
+                return;
+            }
+
+            try {
+                // Llama a la función de backend para cargar pacientes
+                const pacientes = await cargarPacientes(currentDoctorId);
+                
+                apptPacienteSelect.innerHTML = '<option value="">Selecciona un paciente...</option>';
+                pacientes.forEach(p => {
+                    const option = document.createElement('option');
+                    option.value = p.id_paciente;
+                    option.textContent = p.nombre_completo;
+                    apptPacienteSelect.appendChild(option);
+                });
+                
+            } catch(error) {
+                console.error("Error inicializando pacientes:", error);
+                apptPacienteSelect.innerHTML = '<option value="">Error al cargar pacientes</option>';
+            }
+            
+            // Llama a la función de backend para cargar citas
+            cargarYMostrarCitas(currentDoctorId);
+            
+            // Setup Event Listeners
+            newApptForm.addEventListener('submit', handleNewAppointmentSubmit);
+            citasRegistradasContenido.addEventListener('click', handleDeleteAppointmentClick);
+        }
+
+        // Inicializa la página cuando el DOM está listo
+        document.addEventListener('DOMContentLoaded', initializeAppointmentPage);
+    </script>
+</body>
+</html>

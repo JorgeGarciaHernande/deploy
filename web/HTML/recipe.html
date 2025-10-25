@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="../CSS/style_recipe.css">
+</head>
+<body>
+    <div class="selector-patient-container">
+        <label for="patients-options" class="selector-label">Seleccionar Paciente:</label>
+        <select name="" id="patients-options" class="patient-select-control" required>
+            <option value="">Paciente 1</option>
+            <option value="">Paciente 2</option>
+            <option value="">Paciente 3</option>
+        </select>
+    </div>
+
+    <div class="new-recipe-container">
+        <section class="new-recipe-panel">
+            <h2 class="panel-subtitle">Registrar Nueva Receta Médica</h2>
+            <form action="" class="new-recipe-form">
+                <label for="medication-name">Nombre del Medicamento:</label>
+                <input type="text" id="medication-name" name="medication-name" required>
+
+                <label for="medication-type">Tipo de Medicamento:</label>
+                <select name="medication-type" id="medication-type" required>
+                    <option value="">Pastillas</option>
+                    <option value="">Capsula</option>
+                    <option value="">Inyección</option>
+                </select>
+
+                <label for="dosage">Dosis:</label>
+                <input type="text" id="dosage" name="dosage" required>
+
+                <label for="frequency">Frecuencia:</label>
+                <input type="text" id="frequency" name="frequency" required>
+
+                <label for="duration">Duración:</label>
+                <input type="text" id="duration" name="duration" required>
+
+                <label for="additional-notes">Notas Adicionales:</label>
+                <textarea id="additional-notes" name="additional-notes"></textarea>
+
+                <button type="submit">Guardar Receta</button>
+            </form>
+        </section>
+    </div>
+
+    <div class="record-recipe-container">
+
+    </div>
+</body>
+</html>

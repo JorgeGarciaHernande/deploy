@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mis Pacientes</title>
+    <link rel="stylesheet" href="../CSS/style_mis_pacientes.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="backendPacientes.js" defer></script> 
+    <style>
+        /* --- ESTILOS BÁSICOS (Mueve a tu CSS) --- */
+        body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; margin: 0; background-color: #f8f9fa; color: #333; }
+        header { padding: 10px 20px; background-color: #e9ecef; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #dee2e6; }
+        header h2 { margin: 0; color: #343a40; font-size: 1.5em; }
+        header button { padding: 8px 15px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px; font-size: 0.9em; }
+        header button:hover { background-color: #5a6268; }
+        header button:disabled { background-color: #adb5bd; cursor: not-allowed;}
+        .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; padding: 20px; }
+        .patient-card { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-left: 5px solid #007bff; transition: transform 0.2s ease, box-shadow 0.2s ease; display: flex; flex-direction: column; }
+        .patient-card:hover { transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+        .patient-card.inactive { border-left-color: #dc3545; opacity: 0.8; } /* Estilo para inactivos */
+        .patient-card h3 { margin-top: 0; color: #0056b3; font-size: 1.2em; word-break: break-word; }
+        .patient-card.inactive h3 { color: #dc3545; }
+        .patient-card p { margin: 8px 0; color: #495057; font-size: 0.95em; line-height: 1.5; flex-grow: 1; word-break: break-word; }
+        .data-highlight { font-weight: bold; color: #17a2b8; }
+        
+        /* Contenedor de botones para que se vean juntos */
+        .patient-actions { display: flex; gap: 8px; margin-top: 15px; }
+
+        .view-profile-btn { background-color: #007bff; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 0.9em; font-weight: bold; transition: background-color 0.2s; flex-grow: 1; }
+        .view-profile-btn:hover { background-color: #0056b3; }
+        
+        /* Estilo del botón de Cambio de Estado / Reactivar */
+        .change-status-btn { 
+            background-color: #6c757d; /* Gris para cambiar */
+            color: white; 
+            border: none; 
+            padding: 8px 12px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-size: 0.9em; 
+            font-weight: bold; 
+            transition: background-color 0.2s; 
+            flex-grow: 1;
+        }
+        .change-status-btn.reactivate { 
+            background-color: #28a745; /* Verde para reactivar */
+        }
+        .change-status-btn:hover { background-color: #5a6268; }
+        .change-status-btn.reactivate:hover { background-color: #1e7e34; }
+        
+        .loading, .error { text-align: center; padding: 40px 20px; font-size: 1.1em; color: #6c757d; grid-column: 1 / -1; }
+        
+        /* Estilos para la sección de inactivos */
+        .inactive-section { padding: 20px; max-width: 100%; margin-top: 30px; background-color: #fcebeb; border-top: 2px solid #dc3545; }
+        .inactive-section h2 { color: #dc3545; border-bottom: 1px solid #dc3545; padding-bottom: 10px; margin-bottom: 20px; }
+        
+        /* Estilos Modal Perfil (sin cambios) */
+        dialog { border: none; border-radius: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.25); padding: 0; max-width: 550px; width: 90%; }
+        dialog::backdrop { background-color: rgba(0, 0, 0, 0.6); backdrop-filter: blur(3px); }
+        .profile-modal-content { background: white; padding: 30px; border-radius: 8px; position: relative; }
+        .close-profile-modal-btn { position: absolute; top: 10px; right: 15px; background: none; border: none; font-size: 1.8em; color: #aaa; cursor: pointer; line-height: 1; padding: 0; }
+        .close-profile-modal-btn:hover { color: #555; }
+        .profile-modal-content h2 { margin-top: 0; color: #343a40; border-bottom: 1px solid #eee; padding-bottom: 15px; font-size: 1.6em; margin-bottom: 20px; word-break: break-word; }
+        /* Estilo mejorado para filas de datos en modal */
+        .profile-data-row { margin: 14px 0; display: flex; align-items: flex-start; flex-wrap: wrap; line-height: 1.6; }
+        .profile-data-label { font-weight: bold; color: #333; width: 170px; flex-shrink: 0; margin-right: 10px; }
+        .profile-data-value { color: #555; word-break: break-word; flex-grow: 1; }
+        hr { border: none; border-top: 1px solid #eee; margin: 25px 0; }
+        /* Clases estado glucosa */
+        .status-ok { color: #28a745; font-weight: bold; }
+        .status-low { color: #007bff; font-weight: bold; }
+        .status-high { color: #dc3545; font-weight: bold; }
+        .status-elevated { color: #ffc107; font-weight: bold; text-shadow: 1px 1px 1px #eee; }
+    </style>
+</head>
+<body>
+    <div>
+        <header class="header">
+            <h2 class="title-header">Mis pacientes</h2>
+            <div>
+                <button disabled>Buscar (Próx.)</button>
+                <button onclick="location.href='main_menu.html'">Volver al Menú</button>
+            </div>
+        </header>
+    </div>
+
+    <div class="grid-container" id="pacientes-container">
+        <p id="loading-message" class="loading">Cargando pacientes...</p>
+    </div>
+
+    <section class="inactive-section">
+        <h2>Pacientes Inactivos (Archivados)</h2>
+        <div class="grid-container" id="inactivos-container" style="padding: 0; margin-top: 0;">
+            <p id="loading-inactivos" class="loading" style="display:none; color:#dc3545;">Cargando...</p>
+        </div>
+    </section>
+
+    <dialog id="patient-profile-modal">
+        <div class="profile-modal-content">
+            <button class="close-profile-modal-btn" id="close-profile-modal">&times;</button>
+            <h2 id="profile-nombre">Cargando...</h2>
+
+            Datos Personales 
+            <div class="profile-data-row">
+                <span class="profile-data-label">Correo Electrónico:</span>
+                <span class="profile-data-value" id="profile-correo"></span>
+            </div>
+            <div class="profile-data-row">
+                <span class="profile-data-label">Fecha de Nacimiento:</span>
+                <span class="profile-data-value" id="profile-fecha-nacimiento"></span>
+            </div>
+            <div class="profile-data-row">
+                <span class="profile-data-label">Edad:</span>
+                <span class="profile-data-value" id="profile-edad"></span>
+            </div>
+            <hr>
+            Datos Médicos 
+            <div class="profile-data-row">
+                <span class="profile-data-label">Última Glucosa:</span>
+                <span class="profile-data-value" id="profile-glucosa"></span>
+            </div>
+            <div class="profile-data-row">
+                <span class="profile-data-label">Estado Glucosa:</span>
+                <span class="profile-data-value" id="profile-estado"></span>
+            </div>
+            <hr>
+            Datos Físicos 
+            <div class="profile-data-row">
+                <span class="profile-data-label">Altura:</span>
+                <span class="profile-data-value" id="profile-altura"></span>
+            </div>
+            <div class="profile-data-row">
+                <span class="profile-data-label">Peso:</span>
+                <span class="profile-data-value" id="profile-peso"></span>
+            </div>
+            
+        </div>
+    </dialog>
+
+    <script>
+        // --- DOM ELEMENTS ---
+        const pacientesContainer = document.getElementById('pacientes-container');
+        const loadingElement = document.getElementById('loading-message');
+        const inactivosContainer = document.getElementById('inactivos-container');
+        const loadingInactivos = document.getElementById('loading-inactivos');
+        const profileModal = document.getElementById('patient-profile-modal');
+        const closeProfileModalBtn = document.getElementById('close-profile-modal');
+        
+        // --- FUNCIONES DE LA UI: MOSTRAR/LIMPIAR/MANEJO DE EVENTOS (Expuestas a Window) ---
+
+        // Función auxiliar usada solo para renderizar las tarjetas
+        function getEstadoGlucosaSimple(glucosa) {
+            const detalle = getEstadoGlucosaDetallado(glucosa); 
+            if (detalle.clase === 'status-ok') return { texto: 'Normal', clase: detalle.clase }; 
+            return detalle;
+        }
+
+        /**
+         * Muestra una lista de pacientes en la UI (Genera las tarjetas HTML).
+         */
+        window.mostrarPacientesUI = function(pacientes, containerElement, loadInactive = false) {
+            
+            const loader = loadInactive ? loadingInactivos : loadingElement;
+            loader.style.display = 'none'; 
+            
+            if (!pacientes || pacientes.length === 0) {
+                containerElement.innerHTML = `<p class="loading">${loadInactive ? 'No hay pacientes inactivos archivados.' : 'No tienes pacientes activos asignados.'}</p>`;
+                return;
+            }
+
+            containerElement.innerHTML = '';
+            
+            pacientes.forEach(paciente => {
+                const estadoInfo = getEstadoGlucosaSimple(paciente.ultima_medida_glucosa);
+                const isActivo = paciente.activo === true || paciente.activo === null;
+                
+                const actionButtonText = isActivo ? 'Archivar' : 'Reactivar';
+                const actionButtonClass = isActivo ? 'change-status-btn' : 'change-status-btn reactivate';
+                
+                const tarjetaHTML = `
+                    <div class="patient-card ${loadInactive ? 'inactive' : ''}">
+                        <h3>${paciente.nombre_completo || 'N/A'}</h3>
+                        <p>Email: ${paciente.correo || 'N/A'}</p>
+                        <p>Última medición:
+                            <span class="data-highlight">
+                                ${paciente.ultima_medida_glucosa ? paciente.ultima_medida_glucosa + ' mg/dL' : 'N/A'}
+                            </span>
+                        </p>
+                        <p>Estado Glucosa: <span class="${estadoInfo.clase}">${estadoInfo.texto}</span></p>
+                        
+                        <div class="patient-actions">
+                            <button class="${actionButtonClass}" 
+                                    onclick="handleCambioEstado(${paciente.id_paciente}, ${isActivo})">
+                                ${actionButtonText}
+                            </button>
+                            <button class="view-profile-btn" 
+                                    onclick="mostrarPerfilModal(${paciente.id_paciente})">
+                                Ver Perfil Completo
+                            </button>
+                        </div>
+                    </div>
+                `;
+                containerElement.innerHTML += tarjetaHTML;
+            });
+        }
+        
+        /**
+         * Rellena el modal de perfil con los datos cargados.
+         */
+        window.llenarPerfilModalUI = function(paciente) {
+            limpiarYMostrarCargaModal(false);
+            
+            // Estas funciones son del backend (o auxiliares globales)
+            const edad = calcularEdad(paciente.fecha_nacimiento);
+            const estadoGlucosaInfo = getEstadoGlucosaDetallado(paciente.ultima_medida_glucosa);
+            
+            document.getElementById('profile-nombre').textContent = paciente.nombre_completo || 'N/A';
+            document.getElementById('profile-correo').textContent = paciente.correo || 'N/A';
+            document.getElementById('profile-fecha-nacimiento').textContent = paciente.fecha_nacimiento ? formatearFechaSimple(paciente.fecha_nacimiento) : 'N/A';
+            document.getElementById('profile-edad').textContent = edad !== null ? `${edad} años` : 'N/A';
+            document.getElementById('profile-glucosa').textContent = paciente.ultima_medida_glucosa ? `${paciente.ultima_medida_glucosa} mg/dL` : 'Sin registro';
+            
+            const estadoEl = document.getElementById('profile-estado');
+            estadoEl.textContent = estadoGlucosaInfo.texto;
+            estadoEl.className = `profile-data-value ${estadoGlucosaInfo.clase}`; 
+            
+            document.getElementById('profile-altura').textContent = paciente.altura ? `${(paciente.altura * 100).toFixed(0)} cm` : 'N/A';
+            document.getElementById('profile-peso').textContent = paciente.peso ? `${paciente.peso} kg` : 'N/A';
+        }
+
+        /**
+         * Muestra un error de carga principal en la lista.
+         */
+        window.mostrarErrorListaUI = function(mensaje, isInactiveSection = false) {
+            const container = isInactiveSection ? inactivosContainer : pacientesContainer;
+            const loader = isInactiveSection ? loadingInactivos : loadingElement;
+
+            if(loader) loader.style.display = 'none';
+            if(container) container.innerHTML = `<p class="error" style="color: red; grid-column: 1 / -1;">${mensaje}</p>`;
+        }
+        
+        /**
+         * Lógica de manejo de clic en el botón de cambio de estado.
+         */
+        async function handleCambioEstado(pacienteId, esActivoActual) {
+            const password = prompt("Ingresa la contraseña 'continuar' para cambiar el estado:");
+            if (!password) return;
+
+            if (password.toLowerCase() !== 'continuar') {
+                alert("Contraseña incorrecta. Estado no cambiado.");
+                return;
+            }
+
+            try {
+                // cambiarEstadoPaciente está en backendPacientes.js
+                await cambiarEstadoPaciente(pacienteId, esActivoActual);
+                
+                alert(`✅ Estado del paciente ID ${pacienteId} cambiado.`);
+
+            } catch (error) {
+                console.error('Error al cambiar estado en la UI:', error);
+                alert(`Error al cambiar el estado: ${error.message}`);
+            }
+        }
+        
+        // --- LÓGICA DE INICIALIZACIÓN ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            const currentDoctorId = localStorage.getItem('doctorId');
+            
+            if (!currentDoctorId) {
+                mostrarErrorListaUI("Error: Sesión no válida. Inicia sesión de nuevo.");
+                return;
+            }
+            
+            // EXPOSICIÓN GLOBAL DE ELEMENTOS DOM PARA EL BACKEND
+            window.pacientesContainer = pacientesContainer;
+            window.inactivosContainer = inactivosContainer;
+            window.profileModal = profileModal; 
+            window.loadingElement = loadingElement;
+            window.loadingInactivos = loadingInactivos;
+            
+            // CORRECCIÓN CLAVE: Usamos setTimeout para dar tiempo al backendPacientes.js 
+            // a definir 'iniciarCargaDePacientes' en el ámbito 'window'.
+            setTimeout(() => {
+                if (typeof iniciarCargaDePacientes === 'function') {
+                    iniciarCargaDePacientes(currentDoctorId); 
+                } else {
+                    mostrarErrorListaUI("Error de inicialización: La función del backend no se cargó.", false);
+                }
+            }, 50); // Pequeño delay de 50ms.
+
+
+            // Configurar cierre del modal
+            if (profileModal && closeProfileModalBtn) {
+                closeProfileModalBtn.addEventListener('click', () => profileModal.close());
+                profileModal.addEventListener('click', (event) => {
+                    if (event.target === profileModal) { profileModal.close(); }
+                });
+            }
+        });
+        
+        // --- FUNCIONES AUXILIARES DE LÓGICA PURA (También expuestas para el backend/modal) ---
+        function limpiarYMostrarCargaModal(mostrarCarga = true) {
+            const contenidoModal = profileModal.querySelector('.profile-modal-content');
+            if (!contenidoModal) return; 
+            document.getElementById('profile-nombre').textContent = mostrarCarga ? 'Cargando...' : '';
+            document.getElementById('profile-correo').textContent = '...'; 
+            document.getElementById('profile-fecha-nacimiento').textContent = '...';
+            document.getElementById('profile-edad').textContent = '...';
+            document.getElementById('profile-glucosa').textContent = '...';
+            document.getElementById('profile-estado').textContent = '...';
+            document.getElementById('profile-estado').className = 'profile-data-value';
+            document.getElementById('profile-altura').textContent = '...';
+            document.getElementById('profile-peso').textContent = '...';
+            const existingError = contenidoModal.querySelector('#modal-load-error');
+            if (existingError) existingError.remove();
+        }
+
+        // Estas funciones auxiliares deben estar disponibles globalmente si el backend las llama
+        function calcularEdad(fechaNacimiento) {
+             if (!fechaNacimiento) return null; try { const hoy = new Date(); const cumple = new Date(fechaNacimiento); let edad = hoy.getFullYear() - cumple.getFullYear(); const mesDiff = hoy.getMonth() - cumple.getMonth(); if (mesDiff < 0 || (mesDiff === 0 && hoy.getDate() < cumple.getDate())) { edad--; } return edad >= 0 ? edad : null; } catch (e) { console.error("Error calculando edad:", e); return null; }
+        }
+        function getEstadoGlucosaDetallado(glucosa) { 
+            const valor = (typeof glucosa === 'string') ? parseFloat(glucosa) : glucosa; 
+            if (valor === null || valor === undefined || isNaN(valor)) return { texto: 'Desconocido', clase: '' }; 
+            if (valor < 70) return { texto: 'Bajo (Hipoglucemia)', clase: 'status-low' }; 
+            if (valor <= 140) return { texto: 'Normal', clase: 'status-ok' }; 
+            if (valor <= 180) return { texto: 'Elevado', clase: 'status-elevated' }; 
+            return { texto: 'Alto (Hiperglucemia)', clase: 'status-high' };
+        }
+        function formatearFechaSimple(fechaISO) { 
+            if (!fechaISO || typeof fechaISO !== 'string') return 'N/A'; 
+            try { 
+                const partes = fechaISO.split('-'); 
+                if (partes.length === 3) { 
+                    return `${partes[2]}/${partes[1]}/${partes[0]}`; 
+                } 
+                return fechaISO; 
+            } catch (e) { 
+                console.error("Error formateando fecha:", fechaISO, e); 
+                return fechaISO; 
+            }
+        }
+        
+        // Exponer funciones auxiliares para que el backend las use en el modal
+        window.limpiarYMostrarCargaModal = limpiarYMostrarCargaModal;
+        window.calcularEdad = calcularEdad;
+        window.getEstadoGlucosaDetallado = getEstadoGlucosaDetallado;
+        window.formatearFechaSimple = formatearFechaSimple;
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menú Principal</title>
+    <link rel="stylesheet" href="../CSS/style_menu.css">
+    <link rel="stylesheet" href="../CSS/Fonts/Fonts.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="backendMenu.js" defer></script> 
+</head>
+<body>
+    <main class="main-content">
+        <header class="main-header">
+            <h2>Overview</h2>
+            </header>
+        <section class="content-section">
+            <p>Contenido principal de la página (Overview)</p>
+            </section>
+    </main>
+
+    <div class="sidebar-container">
+        <input type="checkbox" id="sidebar-toggle" class="sidebar-toggle-input" hidden>
+        <label for="sidebar-toggle" class="sidebar-toggle-btn">
+            <span class="menu-icon">☰</span>
+        </label>
+        <nav class="sidebar">
+            <div class="sidebar-header"></div>
+            <ul class="main-links">
+                <li><a href="#" class="nav-link"><span class="nav-icon">🏠</span> <span class="nav-text">Inicio</span></a></li>
+                <li><a href="mis_pacientes.html" class="nav-link"><span class="nav-icon">👥</span> <span class="nav-text">Mis pacientes</span></a></li>
+                <li><a href="#" class="nav-link create-patient-link" id="btn-open-paciente-modal-sidebar"><span class="nav-icon">➕</span> <span class="nav-text">Nuevo paciente</span></a></li>
+                <li><a href="#" class="nav-link create-recipe-link" id="btn-open-create-recipe"><span class="nav-icon">📄</span> <span class="nav-text">Receta medica</span></a></li>
+                <li><a href="#" class="nav-link"><span class="nav-icon">🍎</span> <span class="nav-text">Dietas</span></a></li>
+                <li><a href="convenios.html" class="nav-link"><span class="nav-icon">🤝</span> <span class="nav-text">Convenios</span></a></li>
+                <li><a href="appointment.html" class="nav-link"><span class="nav-icon">📅</span> <span class="nav-text">Citas</span></a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <a href="#" class="nav-link" id="btn-open-settings"><span class="nav-icon">⚙️</span> <span class="nav-text">Ajustes</span></a>
+                <a href="../index.html" class="nav-link" onclick="localStorage.clear();"> <span class="nav-icon">🚪</span> <span class="nav-text">Cerrar sesión</span>
+                </a>
+            </div>
+            <div class="user-profile">
+                <img src="../Images/default_user.png" alt="Foto perfil">
+                <span id="doctor-nombre-display" class="nav-text user-name">Cargando...</span>
+            </div>
+        </nav>
+    </div>
+
+    <dialog id="paciente-creation-dialog" class="paciente-dialog">
+        <div class="modal-content">
+            <h2 class="main-title">Crear Nuevo Paciente</h2>
+            <p class="subtitle">Ingresa los datos requeridos.</p>
+            <form id="new-paciente-form">
+                <label for="modal-nombre">Nombre:</label>
+                <input type="text" id="modal-nombre" name="nombre" required placeholder="Juan Antonio">
+                <label for="modal-apellido">Apellido:</label>
+                <input type="text" id="modal-apellido" name="apellido" required placeholder=" Pérez Lopez">
+                <label for="modal-fecha_nacimiento">Fecha de nacimiento:</label>
+                <input type="date" id="modal-fecha_nacimiento" name="fecha_nacimiento" required>
+                <label for="modal-glucosa">Nivel de glucosa Inicial (mg/dL):</label>
+                <input type="number" step="0.1" id="modal-glucosa" name="med_glucosa" placeholder="Ej: 110.5">
+                <label for="modal-peso">Peso (kg):</label>
+                <input type="number" step="0.1" id="modal-peso" name="peso" placeholder="Ej: 70.3">
+                <label for="modal-altura">Altura (cm):</label>
+                <input type="number" id="modal-altura" name="altura" placeholder="Ej: 175">
+                <label for="modal-email">Correo electronico:</label>
+                <input type="email" id="modal-email" name="email" required placeholder="paciente@correo.com">
+                <label for="modal-password">Contraseña:</label>
+                <input type="password" id="modal-password" name="password" required minlength="6"> 
+                <button type="submit" class="primary-button" id="save-paciente-btn">Guardar Paciente</button>
+                <p id="modal-error-message" style="color: red; text-align: center; height: 20px; margin-top: 10px;"></p>
+            </form>
+            <button class="close-btn-dialog" id="paciente-modal-close-dialog">X</button>
+        </div>
+    </dialog>
+
+    <dialog id="create-recipe-dialog" class="recipe-dialog"> 
+        <div class="modal-content">
+            <h2 class="main-title">Crear Nueva Receta</h2>
+            <p class="subtitle">Completa los datos de la receta.</p>
+            <form id="new-recipe-form">
+                <label for="receta-paciente">Paciente:</label>
+                <select id="receta-paciente" name="paciente" required>
+                    <option value="">Cargando pacientes...</option>
+                </select>
+
+                <label for="receta-medicamento">Medicamento:</label>
+                <input type="text" id="receta-medicamento" name="medicamento" required placeholder="Ej: Metformina 850mg">
+
+                <label for="receta-indicaciones">Indicaciones:</label>
+                <textarea id="receta-indicaciones" name="indicaciones" rows="4" required placeholder="Ej: Tomar una tableta cada 12 horas..."></textarea>
+
+                <button type="submit" class="primary-button" id="save-recipe-btn">Guardar Receta</button>
+                <p id="receta-error-message" style="color: red; text-align: center; height: 20px; margin-top: 10px;"></p>
+            </form>
+            <button class="close-btn-dialog" id="create-recipe-close-dialog">X</button>
+        </div>
+    </dialog>
+
+    <dialog id="settings-dialog" class="settings">
+        <div class="modal-content">
+             <h2 class="main-title">Ajustes</h2>
+             <p class="subtitle">Configura tus preferencias.</p>
+             <form id="settings-form">
+                 <label for="theme">Tema:</label>
+                 <select id="theme" name="theme"> 
+                     <option value="light">Claro</option> 
+                     <option value="dark">Oscuro</option> 
+                 </select>
+                 <label for="notifications">Notificaciones:</label>
+                 <select id="notifications" name="notifications"> 
+                     <option value="enabled">Habilitadas</option> 
+                     <option value="disabled">Deshabilitadas</option> 
+                 </select>
+                 <button type="submit" class="primary-button">Guardar Cambios</button>
+             </form>
+             <button class="close-btn-dialog" id="settings-close-dialog">X</button>
+        </div>
+    </dialog>
+
+    <script>
+        // --- ESTADO GLOBAL (Doctor ID y Nombre) ---
+        let currentDoctorId = null;
+        let currentDoctorNombre = null;
+
+        // --- DOM ELEMENTS (Globales para la UI) ---
+        const pacienteDialog = document.getElementById('paciente-creation-dialog');
+        const newPacienteForm = document.getElementById('new-paciente-form');
+        const pacienteModalErrorMessage = document.getElementById('modal-error-message');
+        const savePacienteBtn = document.getElementById('save-paciente-btn');
+        const recetaDialog = document.getElementById('create-recipe-dialog');
+        const newRecetaForm = document.getElementById('new-recipe-form');
+        const recetaErrorMessage = document.getElementById('receta-error-message');
+        const pacienteSelect = document.getElementById('receta-paciente');
+        const saveRecipeBtn = document.getElementById('save-recipe-btn');
+        const settingsDialog = document.getElementById('settings-dialog');
+        const settingsForm = document.getElementById('settings-form');
+
+
+        // --- FUNCIÓN PARA CONFIGURAR LOS MODALES (Abrir/Cerrar) ---
+        function setupModalLogic() {
+            const modals = {
+                paciente: { openBtn: document.getElementById('btn-open-paciente-modal-sidebar'), closeBtn: document.getElementById('paciente-modal-close-dialog') },
+                settings: { openBtn: document.getElementById('btn-open-settings'), closeBtn: document.getElementById('settings-close-dialog') },
+                receta:   { openBtn: document.getElementById('btn-open-create-recipe'), closeBtn: document.getElementById('create-recipe-close-dialog') }
+            };
+
+            for (const key in modals) {
+                const { openBtn, closeBtn } = modals[key];
+                const dialog = document.getElementById(`${key}-creation-dialog`) || document.getElementById(`${key}-dialog`);
+                
+                if (openBtn && dialog) {
+                    openBtn.addEventListener('click', (e) => { e.preventDefault(); dialog.showModal(); });
+                }
+                if (closeBtn && dialog) {
+                    closeBtn.addEventListener('click', () => dialog.close());
+                }
+                if (dialog) {
+                    dialog.addEventListener('click', (event) => {
+                         if (event.target === dialog) { dialog.close(); }
+                    });
+                }
+            }
+        }
+        
+        // --- MANEJO DEL ENVÍO DEL FORMULARIO PACIENTE ---
+        function setupPacienteForm() {
+            if (!newPacienteForm) return;
+
+            newPacienteForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                pacienteModalErrorMessage.textContent = '';
+                if (!currentDoctorId) { pacienteModalErrorMessage.textContent = "Error: No se pudo identificar al doctor."; return; }
+
+                const nombre = document.getElementById('modal-nombre').value;
+                const apellido = document.getElementById('modal-apellido').value;
+                const fechaNacimiento = document.getElementById('modal-fecha_nacimiento').value;
+                const glucosaStr = document.getElementById('modal-glucosa').value;
+                const alturaCmStr = document.getElementById('modal-altura').value;
+                const pesoStr = document.getElementById('modal-peso').value;
+                const email = document.getElementById('modal-email').value;
+                const password = document.getElementById('modal-password').value;
+
+                if (!nombre || !apellido || !fechaNacimiento || !email || !password) { 
+                    pacienteModalErrorMessage.textContent = 'Completa los campos requeridos.'; 
+                    return; 
+                }
+                if (password.length < 6) { 
+                    pacienteModalErrorMessage.textContent = 'La contraseña debe tener al menos 6 caracteres.'; 
+                    return; 
+                }
+
+                const alturaMetros = alturaCmStr ? parseFloat(alturaCmStr) / 100 : null;
+
+                const nuevoPaciente = {
+                    nombre_completo: `${nombre} ${apellido}`, 
+                    fecha_nacimiento: fechaNacimiento, 
+                    correo: email, 
+                    password_hash: password, 
+                    ultima_medida_glucosa: glucosaStr ? parseFloat(glucosaStr) : null, 
+                    altura: alturaMetros, 
+                    peso: pesoStr ? parseFloat(pesoStr) : null, 
+                    id_doctor: parseInt(currentDoctorId)
+                };
+
+                savePacienteBtn.textContent = 'Guardando...';
+                savePacienteBtn.disabled = true;
+
+                try {
+                    // LLAMADA AL BACKEND
+                    await saveNewPatient(nuevoPaciente); 
+
+                    alert(`Paciente ${nombre} ${apellido} creado exitosamente.`);
+                    newPacienteForm.reset();
+                    pacienteDialog.close();
+                    
+                    // Recargar pacientes en el select de recetas
+                    await loadPatientsForRecipeSelect(); 
+
+                } catch (error) {
+                    console.error("Error al guardar paciente:", error);
+                    pacienteModalErrorMessage.textContent = error.message;
+
+                } finally {
+                    savePacienteBtn.textContent = 'Guardar Paciente';
+                    savePacienteBtn.disabled = false;
+                }
+            });
+        }
+
+        // --- MANEJO DEL ENVÍO DEL FORMULARIO RECETA ---
+        async function setupRecetaForm() {
+            if (!newRecetaForm || !pacienteSelect) return;
+            
+            // Cargar pacientes en el select al inicio
+            await loadPatientsForRecipeSelect();
+
+            newRecetaForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                recetaErrorMessage.textContent = '';
+                if (!currentDoctorId) { recetaErrorMessage.textContent = "Error: ID de doctor no encontrado."; return;}
+
+                const idPacienteSeleccionado = pacienteSelect.value;
+                const medicamento = document.getElementById('receta-medicamento').value;
+                const indicaciones = document.getElementById('receta-indicaciones').value;
+
+                if (!idPacienteSeleccionado || !medicamento || !indicaciones) {
+                    recetaErrorMessage.textContent = 'Completa todos los campos de la receta.';
+                    return;
+                }
+                
+                const nuevaReceta = {
+                    id_paciente: parseInt(idPacienteSeleccionado),
+                    id_doctor: parseInt(currentDoctorId), 
+                    medicamento: medicamento,
+                    indicaciones: indicaciones
+                };
+                
+                saveRecipeBtn.textContent = 'Guardando...';
+                saveRecipeBtn.disabled = true;
+
+                try {
+                    // LLAMADA AL BACKEND
+                    await saveNewRecipe(nuevaReceta);
+                    
+                    alert("Receta guardada exitosamente.");
+                    newRecetaForm.reset();
+                    recetaDialog.close();
+
+                } catch (error) {
+                    console.error("Error al guardar receta:", error);
+                    recetaErrorMessage.textContent = error.message;
+
+                } finally {
+                    saveRecipeBtn.textContent = 'Guardar Receta';
+                    saveRecipeBtn.disabled = false;
+                }
+            });
+        }
+        
+        // --- FUNCIÓN PARA CONFIGURAR FORMULARIO AJUSTES (Sin interacción con DB) ---
+        function setupSettingsForm(){
+            if (!settingsForm || !settingsDialog) return;
+
+            settingsForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const tema = document.getElementById('theme').value;
+                localStorage.setItem('userTheme', tema); 
+                alert("Ajustes guardados (simulación).");
+                settingsDialog.close();
+            });
+        }
+
+        // --- FUNCIÓN DE LA UI PARA LLENAR EL SELECT (Llamada desde el backend) ---
+        window.fillPatientSelectUI = function(pacientes) {
+            if (!pacienteSelect) return;
+            pacienteSelect.innerHTML = '<option value="">Selecciona un paciente...</option>';
+            pacientes.forEach(p => {
+                const option = document.createElement('option');
+                option.value = p.id_paciente;
+                option.textContent = p.nombre_completo;
+                pacienteSelect.appendChild(option);
+            });
+        }
+        
+
+        // --- MANEJO AL CARGAR LA PÁGINA ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            currentDoctorId = localStorage.getItem('doctorId');
+            currentDoctorNombre = localStorage.getItem('doctorNombre');
+            const doctorNombreDisplay = document.getElementById('doctor-nombre-display');
+
+            if (!currentDoctorId) {
+                console.error("No se encontró ID de doctor. Redirigiendo al login.");
+                if (doctorNombreDisplay) doctorNombreDisplay.textContent = "Error";
+                window.location.href = '../index.html'; 
+                return;
+            }
+
+            if (doctorNombreDisplay && currentDoctorNombre) {
+                doctorNombreDisplay.textContent = `Dr(a). ${currentDoctorNombre.split(' ')[0]}`;
+            }
+
+            setupModalLogic();
+            setupPacienteForm();
+            await setupRecetaForm(); // Esperar la carga inicial de pacientes
+            setupSettingsForm();
+        });
+
+    </script>
+</body>
+</html>
